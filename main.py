@@ -26,9 +26,8 @@ def error_404(error):
 
 class InputRecords:
 
-    def _init_(self):
-        self.dialogue = dict()
-        return None
+    def __init__(self):
+        self.dialogue = {}
 
     def write(self):
         input_data = request.body.read().decode("utf-8")
@@ -43,13 +42,8 @@ class InputRecords:
         self.dialogue['text'] = dialogue_value
         dialogue_json = json.dumps(self.dialogue)
         loaded_dialogue = json.loads(dialogue_json)
-        print(loaded_dialogue)
-        return request.body
-
-    def get_command(self):
-        return self.dialogue
-
+        # print(loaded_dialogue)
+        return loaded_dialogue
 
 myApp = InputRecords()
 bottle.route('/write', 'POST', myApp.write)
-bottle.route('/command', 'GET', myApp.get_command)
