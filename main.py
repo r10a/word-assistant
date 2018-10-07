@@ -1,14 +1,14 @@
 """`main` is the top level module for your Bottle application."""
 
 # import the Bottle framework
-from bottle import request, Bottle
+from bottle import request, Bottle, abort
+from gevent.pywsgi import WSGIServer
+from geventwebsocket import WebSocketError
+from geventwebsocket.handler import WebSocketHandler
 import json
 
 # Create the Bottle WSGI application.
 bottle = Bottle()
-# Note: We don't need to call run() since our application is embedded within
-# the App Engine WSGI application server.
-
 
 # Define an handler for the root URL of our application.
 @bottle.route('/')
@@ -45,5 +45,22 @@ class InputRecords:
         # print(loaded_dialogue)
         return loaded_dialogue
 
+    def handle_websocket(self):
+        wsock = request.environ.get('wsgi.websocket')
+        if not wsock:
+            abort(400, 'Expected WebSocket request.')
+
+        while True:
+            try:
+                message = wsock.receive()
+                wsock.send("Your message was: %r" % message)
+            except WebSocketError:
+                break
+
+
 myApp = InputRecords()
 bottle.route('/write', 'POST', myApp.write)
+bottle.route('/websocket', 'GET', myApp.handle_websocket)
+
+server = WSGIServer(("0.0.0.0", 8080), bottle, handler_class=WebSocketHandler)
+server.serve_forever()
