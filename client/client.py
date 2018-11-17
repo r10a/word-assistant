@@ -37,7 +37,7 @@ def parse_message(message_from_gce):
 # TODO: Configure Websocket connection to Cloud server
 from websocket import create_connection
 
-ws = create_connection("ws://localhost:8080/websocket")
+ws = create_connection("wss://35.211.244.116:8080/websocket")
 # ws = websocket.WebSocket("ws://localhost:8080/websocket")
 ws.send("Hello world!")
 

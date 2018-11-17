@@ -99,8 +99,15 @@ myApp = InputRecords()
 bottle.route('/write', 'POST', myApp.write)
 bottle.route('/websocket', 'GET', myApp.echo, apply=[websocket])
 
+if __name__ == '__main__':
+    # Get required port, default to 5000.
+    port = os.environ.get('PORT', 5000)
+
+    # Run the app.
+    bottle.run(host='0.0.0.0', port=port)
+
 # TODO: Add SSL
-bottle.run(host='0.0.0.0', port=8080, server=GeventWebSocketServer, **ssldict)
+# bottle.run(host='0.0.0.0', port=8080, server=GeventWebSocketServer)
 
 # server = WSGIServer(("0.0.0.0", 8080), bottle, handler_class=GeventWebSocketServer) #, **ssldict)
 # server.serve_forever()
