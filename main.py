@@ -24,14 +24,7 @@ def error_404(error):
     return 'Sorry, Nothing at this URL.'
 
 
-@get('/websocket', apply=[websocket])
-def echo(ws):
-    while True:
-        msg = ws.receive()
-        if msg is not None:
-            ws.send(msg)
-        else: break
-
+# @get('/websocket', apply=[websocket])
 
 
 class InputRecords:
@@ -51,11 +44,20 @@ class InputRecords:
         dialogue_json = json.dumps(self.dialogue)
         return dialogue_json
 
+    def echo(self, ws):
+        while True:
+            msg = ws.receive()
+            print(msg)
+            if msg is not None:
+                ws.send(msg)
+            else:
+                break
+
 ssldict = {'keyfile': 'keys/privkey.pem', 'certfile': 'keys/cacert.pem'}
 
 myApp = InputRecords()
-bottle.route('/write', 'POST', myApp.write)
-# bottle.route('/websocket', 'GET', myApp.handle_websocket)
+# bottle.route('/write', 'POST', myApp.write)
+bottle.route('/websocket', 'GET', myApp.echo, apply=[websocket])
 
 bottle.run(host='127.0.0.1', port=8080, server=GeventWebSocketServer)
 

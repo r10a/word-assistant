@@ -1,8 +1,13 @@
-# This requirements file lists all dependecies for this project.
-#
-# Run 'pip install -r requirements.txt -t lib/' to install these dependencies
-# in this project's lib/ directory.  The `lib` directory is added to `sys.path`
-# by `appengine_config.py`.
-bottle
-gevent
-gevent-websocket
+bottle==0.12.13
+bottle-websocket==0.2.9
+certifi==2018.10.15
+cffi==1.11.5
+gevent==1.3.7
+gevent-websocket==0.10.1
+greenlet==0.4.15
+lxml==4.2.5
+pycparser==2.19
+python-docx==0.8.7
+six==1.11.0
+websocket-client==0.54.0
+wincertstore==0.2
