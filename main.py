@@ -2,10 +2,38 @@
 
 # import the Bottle framework
 from bottle import request, Bottle, abort, get
-from bottle.ext.websocket import GeventWebSocketServer
-from bottle.ext.websocket import websocket
-from gevent.pywsgi import WSGIServer
+# from bottle.ext.websocket import GeventWebSocketServer
+# from bottle.ext.websocket import websocket
+# from gevent.pywsgi import WSGIServer
 import json
+
+
+import logging
+from bottle import ServerAdapter
+from gevent import pywsgi
+from geventwebsocket.handler import WebSocketHandler
+from geventwebsocket.logging import create_logger
+
+class GeventWebSocketServer(ServerAdapter):
+
+    def run(self, handler):
+        server = pywsgi.WSGIServer((self.host, self.port), handler, handler_class=WebSocketHandler, **self.options)
+
+        if not self.quiet:
+            server.logger = create_logger('geventwebsocket.logging')
+            server.logger.setLevel(logging.INFO)
+            server.logger.addHandler(logging.StreamHandler())
+
+        server.serve_forever()
+
+def websocket(callback):
+    def wrapper(*args, **kwargs):
+        callback(request.environ.get('wsgi.websocket'), *args, **kwargs)
+
+    return wrapper
+
+
+
 
 # Create the Bottle WSGI application.
 bottle = Bottle()
@@ -72,7 +100,7 @@ bottle.route('/write', 'POST', myApp.write)
 bottle.route('/websocket', 'GET', myApp.echo, apply=[websocket])
 
 # TODO: Add SSL
-bottle.run(host='127.0.0.1', port=8080, server=GeventWebSocketServer)
+bottle.run(host='0.0.0.0', port=8080, server=GeventWebSocketServer, **ssldict)
 
 # server = WSGIServer(("0.0.0.0", 8080), bottle, handler_class=GeventWebSocketServer) #, **ssldict)
 # server.serve_forever()
