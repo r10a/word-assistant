@@ -38,24 +38,18 @@ class InputRecords:
 
     def __init__(self):
         self.dialogue = {}
+        self.message_to_client = []
+        self.message_iter = 0
 
-    def write(self):
-        input_data = request.body.read().decode("utf-8")
-        json_data = json.loads(input_data)
-        inputs = json_data['inputs']
-        raw_inputs = inputs[0]['rawInputs']
-        raw_query = raw_inputs[0]['query'].split(" ")
-        dialogue_key = raw_query[0]
-        dialogue_value = raw_query[1:len(raw_query)]
-        dialogue_value = " ".join(dialogue_value)
-        self.dialogue['command'] = dialogue_key
+    def create_json(self, message):
+        dialoge_clientID, dialogue_command, dialogue_filename, dialogue_value, dialogue_count = message.split(',')
+        self.dialogue['clientID'] = dialoge_clientID
+        self.dialogue['filename'] = dialogue_filename
+        self.dialogue['command'] = dialogue_command
         self.dialogue['text'] = dialogue_value
+        self.dialogue['counter'] = dialogue_count
         dialogue_json = json.dumps(self.dialogue)
-        loaded_dialogue = json.loads(dialogue_json)
-        # print(loaded_dialogue)
-        return loaded_dialogue
-
-
+        return dialogue_json
 
 ssldict = {'keyfile': 'keys/privkey.pem', 'certfile': 'keys/cacert.pem'}
 
