@@ -1,10 +1,10 @@
 """`main` is the top level module for your Bottle application."""
 
 # import the Bottle framework
-from bottle import request, Bottle, abort
+from bottle import request, Bottle, abort, get
+from bottle.ext.websocket import GeventWebSocketServer
+from bottle.ext.websocket import websocket
 from gevent.pywsgi import WSGIServer
-from geventwebsocket import WebSocketError
-from geventwebsocket.handler import WebSocketHandler
 import json
 
 # Create the Bottle WSGI application.
@@ -22,6 +22,16 @@ def hello():
 def error_404(error):
     """Return a custom 404 error."""
     return 'Sorry, Nothing at this URL.'
+
+
+@get('/websocket', apply=[websocket])
+def echo(ws):
+    while True:
+        msg = ws.receive()
+        if msg is not None:
+            ws.send(msg)
+        else: break
+
 
 
 class InputRecords:
@@ -45,22 +55,15 @@ class InputRecords:
         # print(loaded_dialogue)
         return loaded_dialogue
 
-    def handle_websocket(self):
-        wsock = request.environ.get('wsgi.websocket')
-        if not wsock:
-            abort(400, 'Expected WebSocket request.')
 
-        while True:
-            try:
-                message = wsock.receive()
-                wsock.send("Your message was: %r" % message)
-            except WebSocketError:
-                break
 
+ssldict = {'keyfile': 'keys/privkey.pem', 'certfile': 'keys/cacert.pem'}
 
 myApp = InputRecords()
 bottle.route('/write', 'POST', myApp.write)
-bottle.route('/websocket', 'GET', myApp.handle_websocket)
+# bottle.route('/websocket', 'GET', myApp.handle_websocket)
 
-server = WSGIServer(("0.0.0.0", 8080), bottle, handler_class=WebSocketHandler)
-server.serve_forever()
+bottle.run(host='127.0.0.1', port=8080, server=GeventWebSocketServer)
+
+# server = WSGIServer(("0.0.0.0", 8080), bottle, handler_class=GeventWebSocketServer) #, **ssldict)
+# server.serve_forever()
