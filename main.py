@@ -23,16 +23,28 @@ def error_404(error):
     """Return a custom 404 error."""
     return 'Sorry, Nothing at this URL.'
 
-
-# @get('/websocket', apply=[websocket])
-
-
 class InputRecords:
 
     def __init__(self):
         self.dialogue = {}
         self.message_to_client = []
         self.message_iter = 0
+
+    def write(self):
+        input_data = request.body.read().decode("utf-8")
+        json_data = json.loads(input_data)
+        inputs = json_data['inputs']
+        raw_inputs = inputs[0]['rawInputs']
+        raw_query = raw_inputs[0]['query'].split(" ")
+        dialogue_key = raw_query[0]
+        dialogue_value = raw_query[1:len(raw_query)]
+        dialogue_value = " ".join(dialogue_value)
+        self.dialogue['command'] = dialogue_key
+        self.dialogue['text'] = dialogue_value
+        dialogue_json = json.dumps(self.dialogue)
+        loaded_dialogue = json.loads(dialogue_json)
+        # print(loaded_dialogue)
+        return loaded_dialogue
 
     def create_json(self, message):
         dialoge_clientID, dialogue_command, dialogue_filename, dialogue_value, dialogue_count = message.split(',')
@@ -56,9 +68,10 @@ class InputRecords:
 ssldict = {'keyfile': 'keys/privkey.pem', 'certfile': 'keys/cacert.pem'}
 
 myApp = InputRecords()
-# bottle.route('/write', 'POST', myApp.write)
+bottle.route('/write', 'POST', myApp.write)
 bottle.route('/websocket', 'GET', myApp.echo, apply=[websocket])
 
+# TODO: Add SSL
 bottle.run(host='127.0.0.1', port=8080, server=GeventWebSocketServer)
 
 # server = WSGIServer(("0.0.0.0", 8080), bottle, handler_class=GeventWebSocketServer) #, **ssldict)
