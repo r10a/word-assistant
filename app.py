@@ -67,9 +67,11 @@ def hello():
 class InputRecords:
 
     def receive_from_ga(self):
-        content = json.loads(request.get_json())
-        arguments = content['inputs'][0]['arguments'][0]
-        print(arguments)  # For debugging
+        content = request.get_json()
+        print(content)  # For debugging
+        print(content.items())
+        print(content.keys())
+        print(content.values())
         # input_data = request.body.read().decode("utf-8")
         # json_data = json.loads(input_data)
         # inputs = json_data['inputs']
