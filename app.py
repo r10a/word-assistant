@@ -4,7 +4,7 @@ import logging
 import redis
 import gevent
 from flask import Flask, request
-from flask_restful import Resource, Api
+from flask_restful import Resource, Api, reqparse
 from flask_sockets import Sockets
 
 REDIS_URL = os.environ['REDIS_URL']
@@ -14,6 +14,10 @@ REDIS_CHAN = 'word-assistant'
 # Create the Flask WSGI application.
 app = Flask(__name__)
 app.debug = 'DEBUG' in os.environ
+
+parser = reqparse.RequestParser()
+parser.add_argument('user')
+parser.add_argument('inputs')
 
 sockets = Sockets(app)
 api = Api(app)
@@ -69,7 +73,7 @@ class HelloWorld(Resource):
 class InputRecords(Resource):
 
     def post(self):
-        args = request.args
+        args = parser.parse_args()
         print(args)  # For debugging
         # input_data = request.body.read().decode("utf-8")
         # json_data = json.loads(input_data)
