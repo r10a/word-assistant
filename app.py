@@ -14,10 +14,6 @@ REDIS_CHAN = 'word-assistant'
 app = Flask(__name__)
 app.debug = 'DEBUG' in os.environ
 
-parser = reqparse.RequestParser()
-parser.add_argument('user')
-parser.add_argument('inputs')
-
 sockets = Sockets(app)
 redis = redis.from_url(REDIS_URL)
 
