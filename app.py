@@ -4,7 +4,6 @@ import logging
 import redis
 import gevent
 from flask import Flask, request
-from flask_restful import Resource, Api, reqparse
 from flask_sockets import Sockets
 
 REDIS_URL = os.environ['REDIS_URL']
@@ -20,7 +19,6 @@ parser.add_argument('user')
 parser.add_argument('inputs')
 
 sockets = Sockets(app)
-api = Api(app)
 redis = redis.from_url(REDIS_URL)
 
 class ClientBackend(object):
@@ -65,16 +63,16 @@ clients.start()
 
 
 # Define an handler for the root URL of our application.
-class HelloWorld(Resource):
-    def get(self):
-        return {'hello': 'world'}
+@app.route('/')
+def hello():
+    return {'hello': 'world'}
 
 
-class InputRecords(Resource):
+class InputRecords:
 
-    def post(self):
-        args = parser.parse_args()
-        print(args)  # For debugging
+    def receive_from_ga(self):
+        content = request.get_json()
+        print(content)  # For debugging
         # input_data = request.body.read().decode("utf-8")
         # json_data = json.loads(input_data)
         # inputs = json_data['inputs']
@@ -101,8 +99,9 @@ class InputRecords(Resource):
     #     dialogue_json = json.dumps(self.dialogue)
     #     return dialogue_json
 
-api.add_resource(HelloWorld, '/')
-api.add_resource(InputRecords, '/write')
+input = InputRecords()
+
+app.add_url_rule('/write', 'write', input.receive_from_ga, methods=['POST'])
 
 @sockets.route('/receive')
 def outbox(ws):
