@@ -3,7 +3,7 @@ import json
 import logging
 import redis
 import gevent
-from flask import Flask, render_template
+from flask import Flask, request
 from flask_restful import Resource, Api
 from flask_sockets import Sockets
 
@@ -61,20 +61,17 @@ clients.start()
 
 
 # Define an handler for the root URL of our application.
-def hello():
-    """Return a friendly HTTP greeting."""
-    return 'Hello World Flask!!!!!'
+class HelloWorld(Resource):
+    def get(self):
+        return {'hello': 'world'}
 
 
-class InputRecords:
+class InputRecords(Resource):
 
-    def __init__(self):
-        self.dialogue = {}
-        self.message_to_client = []
-        self.message_iter = 0
-
-    def write(self):
-        input_data = request.body.read().decode("utf-8")
+    def post(self):
+        args = request.args
+        print(args)  # For debugging
+        # input_data = request.body.read().decode("utf-8")
         # json_data = json.loads(input_data)
         # inputs = json_data['inputs']
         # raw_inputs = inputs[0]['rawInputs']
@@ -87,23 +84,21 @@ class InputRecords:
         # dialogue_json = json.dumps(self.dialogue)
         # loaded_dialogue = json.loads(dialogue_json)
         # print(loaded_dialogue)
-        app.logger.info(u'Inserting message: {}'.format(input_data))
-        redis.publish(REDIS_CHAN, json.dumps(input_data))
+        # app.logger.info(u'Inserting message: {}'.format(input_data))
+        # redis.publish(REDIS_CHAN, json.dumps(input_data))
 
-    def create_json(self, message):
-        dialoge_clientID, dialogue_command, dialogue_filename, dialogue_value, dialogue_count = message.split(',')
-        self.dialogue['clientID'] = dialoge_clientID
-        self.dialogue['filename'] = dialogue_filename
-        self.dialogue['command'] = dialogue_command
-        self.dialogue['text'] = dialogue_value
-        self.dialogue['counter'] = dialogue_count
-        dialogue_json = json.dumps(self.dialogue)
-        return dialogue_json
+    # def create_json(self, message):
+    #     dialoge_clientID, dialogue_command, dialogue_filename, dialogue_value, dialogue_count = message.split(',')
+    #     self.dialogue['clientID'] = dialoge_clientID
+    #     self.dialogue['filename'] = dialogue_filename
+    #     self.dialogue['command'] = dialogue_command
+    #     self.dialogue['text'] = dialogue_value
+    #     self.dialogue['counter'] = dialogue_count
+    #     dialogue_json = json.dumps(self.dialogue)
+    #     return dialogue_json
 
-myApp = InputRecords()
-
-api.add_resource(hello, '/')
-api.add_resource(myApp.write, '/write')
+api.add_resource(HelloWorld, '/')
+api.add_resource(InputRecords, '/write')
 
 @sockets.route('/receive')
 def outbox(ws):
