@@ -37,9 +37,11 @@ def parse_message(message_from_gce):
 # TODO: Configure Websocket connection to Cloud server
 from websocket import create_connection
 
-ws = create_connection("wss://word-assistant.herokuapp.com:5000/receive")
+ws = create_connection("wss://word-assistant.herokuapp.com/receive")
 # ws = websocket.WebSocket("ws://localhost:8080/websocket")
 ws.send("Hello world!")
+message = ws.receive()
+print(message)
 
 #
 # iter = 0

@@ -61,14 +61,15 @@ clients.start()
 # Define an handler for the root URL of our application.
 @app.route('/')
 def hello():
-    return {'hello': 'world'}
+    return "Hello world flask"
 
 
 class InputRecords:
 
     def receive_from_ga(self):
         content = request.get_json()
-        print(content)  # For debugging
+        arguments = content['inputs'][0]['arguments'][0]
+        print(arguments)  # For debugging
         # input_data = request.body.read().decode("utf-8")
         # json_data = json.loads(input_data)
         # inputs = json_data['inputs']
@@ -103,6 +104,7 @@ app.add_url_rule('/write', 'write', input.receive_from_ga, methods=['POST'])
 def outbox(ws):
     """Sends outgoing chat messages, via `ClientBackend`."""
     clients.register(ws)
+    ws.send("Connected")
 
     while not ws.closed:
         # Context switch while `ChatBackend.start` is running in the background.
