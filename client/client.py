@@ -40,7 +40,7 @@ from websocket import create_connection
 ws = create_connection("wss://word-assistant.herokuapp.com/receive")
 # ws = websocket.WebSocket("ws://localhost:8080/websocket")
 ws.send("Hello world!")
-message = ws.receive()
+message = ws.recv()
 print(message)
 
 #
