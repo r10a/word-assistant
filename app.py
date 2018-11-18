@@ -72,8 +72,9 @@ class InputRecords:
         print(content.items())
         print(content.keys())
         print(content.values())
-        queryResult = json.loads(content['queryResult'])
+        queryResult = content['queryResult']
         print(queryResult['queryText'], queryResult['parameters'])
+        return ""
         # input_data = request.body.read().decode("utf-8")
         # json_data = json.loads(input_data)
         # inputs = json_data['inputs']
