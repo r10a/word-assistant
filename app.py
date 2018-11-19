@@ -2,12 +2,9 @@ import os
 import json
 import logging
 import gevent
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_sockets import Sockets
 from time import sleep
-
-# REDIS_URL = "redis://h:p04a8e4cbdb3e36af2c205959d0c8e94d5105fadb2de41cf2ddf9d305572b8a85@ec2-54-158-0-180.compute-1.amazonaws.com:61719" # os.environ['REDIS_URL']
-# REDIS_CHAN = 'word-assistant'
 
 # Create the Flask WSGI application.
 app = Flask(__name__)
@@ -15,10 +12,12 @@ app.debug = 'DEBUG' in os.environ
 
 sockets = Sockets(app)
 
+
 # Define an handler for the root URL of our application.
 @app.route('/')
 def hello():
     return "Hello world flask"
+
 
 class InputRecords:
 
@@ -41,22 +40,43 @@ class InputRecords:
         app.logger.info(u'Inserting message: {}'.format(command))
         acks = []
         for client in self.clients:
-            try:
-                client.send(json.dumps(command))
-                acks.append(client.receive())
-            except Exception:
-                self.clients.remove(client)
+            if not client.closed:
+                try:
+                    client.send(json.dumps(command))
+                    acks.append(client.receive())
+                except Exception:
+                    self.clients.remove(client)
         print(acks)
+        response = ""
         for a in acks:
             if a == True:
-                return "Done"
+                response = "Done. Please continue"
+                break
             else:
-                return "Error"
-        return "True"
+                response = "Sorry. Somthing went wrong. Please try again."
+
+        return jsonify({
+            "payload": {
+                "google": {
+                    "expectUserResponse": true,
+                    "richResponse": {
+                        "items": [
+                            {
+                                "simpleResponse": {
+                                    "textToSpeech": "Sorry. Somthing went wrong. Please try again."
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        })
+
 
 input = InputRecords()
 
 app.add_url_rule('/write', 'write', input.receive_from_ga, methods=['POST'])
+
 
 @sockets.route('/connect')
 def outbox(ws):
@@ -67,8 +87,10 @@ def outbox(ws):
         # Context switch while `ChatBackend.start` is running in the background.
         sleep(0.1)
 
+
 if __name__ == '__main__':
     from gevent import pywsgi
     from geventwebsocket.handler import WebSocketHandler
+
     server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)
     server.serve_forever()

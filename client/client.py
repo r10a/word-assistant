@@ -7,14 +7,17 @@ import logging
 # TODO: Add more functionality
 class DocumentWriter:
 
-    def __init__(self, docname="default"):
+    def __init__(self, docname="generated.docx"):
         self._current_para = None
         self.error_code = 0
         self._document = Document()
         self._docname = docname
 
     def add_text(self, text):
-        self._current_para.add_run(text=text)
+        if self._current_para is None:
+            self.add_paragraph(text)
+        else:
+            self._current_para.add_run(text=text)
 
     def add_heading(self, text):
         self._current_para = self._document.add_heading(text=text)
@@ -32,15 +35,6 @@ def parse_message(command):
     parameters = json_data['parameters']['text']
     command = queryText.split()[0]
     return command, parameters
-
-
-# TODO: Configure Websocket connection to Cloud server
-# from websocket import create_connection
-
-# ws = create_connection("wss://word-assistant.herokuapp.com/connect")
-# ws = create_connection("ws://localhost:5000/connect")
-# message = ws.recv()
-# print(message)
 
 doc = DocumentWriter()
 
@@ -62,18 +56,22 @@ def on_error(ws, error):
 
 def on_close(ws):
     print("### closed ###")
+    connect()
 
 def on_open(ws):
     print("connected")
 
-if __name__ == "__main__":
+def connect():
     websocket.enableTrace(True)
     ws = websocket.WebSocketApp("wss://word-assistant.herokuapp.com/connect",
-                              on_message = on_message,
-                              on_error = on_error,
-                              on_close = on_close)
+                                on_message=on_message,
+                                on_error=on_error,
+                                on_close=on_close)
     ws.on_open = on_open
     ws.run_forever()
+
+if __name__ == "__main__":
+    connect()
 
 # while True:
 #     command = ws.recv()
