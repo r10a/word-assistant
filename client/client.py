@@ -2,6 +2,7 @@ from docx import Document
 import json
 import websocket
 import logging
+from uuid import getnode
 
 
 WS_URL = "wss://word-assistant.herokuapp.com/connect"
@@ -33,9 +34,8 @@ class DocumentWriter:
 
 class WebSocketHandler:
 
-    def __init__(self, url):
+    def __init__(self):
         self.doc = DocumentWriter()
-        self.url = url
 
     def parse_message(self, command):
         json_data = json.loads(command)
@@ -44,53 +44,61 @@ class WebSocketHandler:
         command = query.split()[0]
         return command, parameters
 
-    def on_message(self, ws, message):
-        print("command", message)
-        command, parameters = self.parse_message(message)
-        if command == 'type':
-            try:
-                print("adding", parameters)
-                self.doc.add_text(parameters)
-                self.doc.save_document()
-                ws.send("Message processed")
-            except Exception as e:
-                logging.error('Failed to add to document: ' + str(e))
-                ws.send("Message not processed")
 
-        if command == 'create':
-            try:
-                print("creating", parameters)
-                # doc.add_text(parameters)
-                self.doc = DocumentWriter(docname=parameters)
-                self.doc.save_document()
-                ws.send("Message processed")
-            except Exception as e:
-                logging.error('Failed to add to document: ' + str(e))
-                ws.send("Message not processed")
+main = WebSocketHandler()
 
-    def on_error(self, ws, error):
-        print(error)
 
-    def on_close(self, ws):
-        print("### closed ###")
-        self.connect()
+def on_message(ws, message):
+    print("command", message)
+    command, parameters = main.parse_message(message)
+    if command == 'type':
+        try:
+            print("adding", parameters)
+            main.doc.add_text(parameters)
+            main.doc.save_document()
+            ws.send("Message processed")
+        except Exception as e:
+            logging.error('Failed to add to document: ' + str(e))
+            ws.send("Message not processed")
 
-    def on_open(self, ws):
-        print("connected")
+    if command == 'create':
+        try:
+            print("creating", parameters)
+            # doc.add_text(parameters)
+            main.doc = DocumentWriter(docname=parameters)
+            main.doc.save_document()
+            ws.send("Message processed")
+        except Exception as e:
+            logging.error('Failed to add to document: ' + str(e))
+            ws.send("Message not processed")
 
-    def connect(self):
-        websocket.enableTrace(True)
-        ws = websocket.WebSocketApp(self.url,
-                                    on_message=self.on_message,
-                                    on_error=self.on_error,
-                                    on_close=self.on_close)
-        ws.on_open = self.on_open
-        ws.run_forever()
+
+def on_error(ws, error):
+    print(error)
+
+
+def on_close(ws):
+    print("### closed ###")
+    connect()
+
+
+def on_open(ws):
+    ws.send(str(getnode()))
+    print("connected with id: " + str(getnode()))
+
+
+def connect():
+    websocket.enableTrace(True)
+    ws = websocket.WebSocketApp(WS_URL,
+                                on_message=on_message,
+                                on_error=on_error,
+                                on_close=on_close)
+    ws.on_open = on_open
+    ws.run_forever()
 
 
 if __name__ == "__main__":
-    main = WebSocketHandler(WS_URL)
-    main.connect()
+    connect()
 
 
 #

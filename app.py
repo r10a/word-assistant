@@ -24,7 +24,9 @@ class InputRecords:
 
     def register(self, client):
         """Register a WebSocket connection for Redis updates."""
-        self.clients.append(client)
+        uid = client.receive()
+        app.logger.info('Client connected with id: ' + str(uid))
+        self.clients.append((uid, client))
 
     def receive_from_ga(self):
         content = request.get_json()
@@ -37,17 +39,17 @@ class InputRecords:
         }
         app.logger.info(u'Inserting message: {}'.format(command))
         acks = []
-        for client in self.clients:
+        for uid, client in self.clients:
             if not client.closed:
                 try:
                     client.send(json.dumps(command))
-                    acks.append(client.receive())
+                    acks.append((uid, client.receive()))
                 except Exception as e:
-                    app.logger.error('Failed to send message: ' + str(e))
-                    self.clients.remove(client)
+                    app.logger.error('Failed to send message: ' + str(e) + ' ' + uid)
+                    self.clients.remove((uid, client))
         print(acks)
         response = ""
-        for a in acks:
+        for uid, a in acks:
             if a:
                 response = "Done. Please continue"
                 break
