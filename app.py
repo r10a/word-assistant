@@ -14,15 +14,18 @@ sockets = Sockets(app)
 
 
 # Define an handler for the root URL of our application.
-@app.route('/')
-def hello():
-    return "Hello world flask"
+# @app.route('/')
+# def hello():
+#     return "Hello world flask"
 
 
 class InputRecords:
 
     def __init__(self):
         self.clients = list()
+
+    def get_clients(self):
+        return str(len(self.clients)) + ' ' + str(self.clients)
 
     def register(self, client):
         """Register a WebSocket connection for Redis updates."""
@@ -80,6 +83,7 @@ class InputRecords:
 
 input = InputRecords()
 
+app.add_url_rule('/', '', input.get_clients, methods=['GET'])
 app.add_url_rule('/write', 'write', input.receive_from_ga, methods=['POST'])
 
 
