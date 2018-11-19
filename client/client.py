@@ -2,6 +2,7 @@ from docx import Document
 import json
 import os
 import websocket
+import logging
 
 # TODO: Add more functionality
 class DocumentWriter:
@@ -48,10 +49,12 @@ def on_message(ws, message):
     command, parameters = parse_message(message)
     if command == 'type':
         try:
+            print("adding", parameters)
             doc.add_text(parameters)
             doc.save_document()
             ws.send("Message processed")
-        except:
+        except Exception as e:
+            logging.error('Failed to upload to ftp: ' + str(e))
             ws.send("Message not processed")
 
 def on_error(ws, error):
@@ -65,7 +68,7 @@ def on_open(ws):
 
 if __name__ == "__main__":
     websocket.enableTrace(True)
-    ws = websocket.WebSocketApp("ws://localhost:5000/connect",
+    ws = websocket.WebSocketApp("wss://word-assistant.herokuapp.com/connect",
                               on_message = on_message,
                               on_error = on_error,
                               on_close = on_close)

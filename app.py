@@ -52,6 +52,7 @@ class InputRecords:
                 return "Done"
             else:
                 return "Error"
+        return "True"
 
 input = InputRecords()
 
