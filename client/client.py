@@ -56,10 +56,10 @@ def on_message(ws, message):
             print("adding", parameters)
             main.doc.add_text(parameters)
             main.doc.save_document()
-            ws.send("Message processed")
+            ws.send("True")
         except Exception as e:
             logging.error('Failed to add to document: ' + str(e))
-            ws.send("Message not processed")
+            ws.send("False")
 
     if command == 'create':
         try:
@@ -67,10 +67,10 @@ def on_message(ws, message):
             # doc.add_text(parameters)
             main.doc = DocumentWriter(docname=parameters)
             main.doc.save_document()
-            ws.send("Message processed")
+            ws.send("True")
         except Exception as e:
             logging.error('Failed to add to document: ' + str(e))
-            ws.send("Message not processed")
+            ws.send("False")
 
 
 def on_error(ws, error):

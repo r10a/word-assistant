@@ -43,18 +43,19 @@ class InputRecords:
             if not client.closed:
                 try:
                     client.send(json.dumps(command))
-                    acks.append((uid, client.receive()))
+                    response = client.receive()
+                    acks.append((uid, response))
                 except Exception as e:
                     app.logger.error('Failed to send message: ' + str(e) + ' ' + uid)
                     self.clients.remove((uid, client))
         print(acks)
-        response = ""
+        text = ""
         for uid, a in acks:
-            if a:
-                response = "Done. Please continue"
+            if a == "True":
+                text = "Done. Please continue"
                 break
             else:
-                response = "Sorry. Somthing went wrong. Please try again."
+                text = "Sorry. Something went wrong. Please try again."
 
         return jsonify({
             "payload": {
@@ -64,7 +65,7 @@ class InputRecords:
                         "items": [
                             {
                                 "simpleResponse": {
-                                    "textToSpeech": response
+                                    "textToSpeech": text
                                 }
                             }
                         ]
