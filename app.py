@@ -1,120 +1,73 @@
 import os
 import json
 import logging
-import redis
 import gevent
 from flask import Flask, request
 from flask_sockets import Sockets
+from time import sleep
 
-REDIS_URL = os.environ['REDIS_URL']
-REDIS_CHAN = 'word-assistant'
-
+# REDIS_URL = "redis://h:p04a8e4cbdb3e36af2c205959d0c8e94d5105fadb2de41cf2ddf9d305572b8a85@ec2-54-158-0-180.compute-1.amazonaws.com:61719" # os.environ['REDIS_URL']
+# REDIS_CHAN = 'word-assistant'
 
 # Create the Flask WSGI application.
 app = Flask(__name__)
 app.debug = 'DEBUG' in os.environ
 
 sockets = Sockets(app)
-redis = redis.from_url(REDIS_URL)
-
-class ClientBackend(object):
-    """Interface for registering and updating WebSocket clients."""
-
-    def __init__(self):
-        self.clients = list()
-        self.pubsub = redis.pubsub()
-        self.pubsub.subscribe(REDIS_CHAN)
-
-    def __iter_data(self):
-        for message in self.pubsub.listen():
-            data = message.get('data')
-            if message['type'] == 'message':
-                app.logger.info(u'Sending message: {}'.format(data))
-                yield data
-
-    def register(self, client):
-        """Register a WebSocket connection for Redis updates."""
-        self.clients.append(client)
-
-    def send(self, client, data):
-        """Send given data to the registered client.
-        Automatically discards invalid connections."""
-        try:
-            client.send(data)
-        except Exception:
-            self.clients.remove(client)
-
-    def run(self):
-        """Listens for new messages in Redis, and sends them to clients."""
-        for data in self.__iter_data():
-            for client in self.clients:
-                gevent.spawn(self.send, client, data)
-
-    def start(self):
-        """Maintains Redis subscription in the background."""
-        gevent.spawn(self.run)
-
-clients = ClientBackend()
-clients.start()
-
 
 # Define an handler for the root URL of our application.
 @app.route('/')
 def hello():
     return "Hello world flask"
 
-
 class InputRecords:
+
+    def __init__(self):
+        self.clients = list()
+
+    def register(self, client):
+        """Register a WebSocket connection for Redis updates."""
+        self.clients.append(client)
 
     def receive_from_ga(self):
         content = request.get_json()
-        print(content)  # For debugging
-        print(content.items())
-        print(content.keys())
-        print(content.values())
+        print("content", content)
         queryResult = content['queryResult']
-        print(queryResult['queryText'], queryResult['parameters'])
-        return ""
-        # input_data = request.body.read().decode("utf-8")
-        # json_data = json.loads(input_data)
-        # inputs = json_data['inputs']
-        # raw_inputs = inputs[0]['rawInputs']
-        # raw_query = raw_inputs[0]['query'].split(" ")
-        # dialogue_key = raw_query[0]
-        # dialogue_value = raw_query[1:len(raw_query)]
-        # dialogue_value = " ".join(dialogue_value)
-        # self.dialogue['command'] = dialogue_key
-        # self.dialogue['text'] = dialogue_value
-        # dialogue_json = json.dumps(self.dialogue)
-        # loaded_dialogue = json.loads(dialogue_json)
-        # print(loaded_dialogue)
-        # app.logger.info(u'Inserting message: {}'.format(input_data))
-        # redis.publish(REDIS_CHAN, json.dumps(input_data))
-
-    # def create_json(self, message):
-    #     dialoge_clientID, dialogue_command, dialogue_filename, dialogue_value, dialogue_count = message.split(',')
-    #     self.dialogue['clientID'] = dialoge_clientID
-    #     self.dialogue['filename'] = dialogue_filename
-    #     self.dialogue['command'] = dialogue_command
-    #     self.dialogue['text'] = dialogue_value
-    #     self.dialogue['counter'] = dialogue_count
-    #     dialogue_json = json.dumps(self.dialogue)
-    #     return dialogue_json
+        command = {
+            "queryText": queryResult['queryText'],
+            "parameters": queryResult['parameters'],
+            "user": 1
+        }
+        app.logger.info(u'Inserting message: {}'.format(command))
+        acks = []
+        for client in self.clients:
+            try:
+                client.send(json.dumps(command))
+                acks.append(client.receive())
+            except Exception:
+                self.clients.remove(client)
+        print(acks)
+        for a in acks:
+            if a == True:
+                return "Done"
+            else:
+                return "Error"
 
 input = InputRecords()
 
 app.add_url_rule('/write', 'write', input.receive_from_ga, methods=['POST'])
 
-@sockets.route('/receive')
+@sockets.route('/connect')
 def outbox(ws):
     """Sends outgoing chat messages, via `ClientBackend`."""
-    clients.register(ws)
-    ws.send("Connected")
-
+    input.register(ws)
+    # ws.send("Connected")
     while not ws.closed:
         # Context switch while `ChatBackend.start` is running in the background.
-        gevent.sleep(0.1)
-
+        sleep(0.1)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    from gevent import pywsgi
+    from geventwebsocket.handler import WebSocketHandler
+    server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)
+    server.serve_forever()

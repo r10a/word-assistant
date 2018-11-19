@@ -1,12 +1,12 @@
 from docx import Document
 import json
 import os
-
+import websocket
 
 # TODO: Add more functionality
 class DocumentWriter:
 
-    def __init__(self, docname):
+    def __init__(self, docname="default"):
         self._current_para = None
         self.error_code = 0
         self._document = Document()
@@ -24,24 +24,67 @@ class DocumentWriter:
     def save_document(self):
         self._document.save(self._docname)
 
-def parse_message(message_from_gce):
-    json_data = json.loads(message_from_gce)
-    message_clientID = str(json_data['clientID'])
-    message_filename = str(json_data['filename'])
-    message_command = str(json_data['command'])
-    message_value = str(json_data['text'])
-    message_count = str(json_data['counter'])
-    return message_clientID, message_filename, message_command, message_value, message_count
+
+def parse_message(command):
+    json_data = json.loads(command)
+    queryText = str(json_data['queryText'])
+    parameters = json_data['parameters']['text']
+    command = queryText.split()[0]
+    return command, parameters
 
 
 # TODO: Configure Websocket connection to Cloud server
-from websocket import create_connection
+# from websocket import create_connection
 
-ws = create_connection("wss://word-assistant.herokuapp.com/receive")
-# ws = websocket.WebSocket("ws://localhost:8080/websocket")
-ws.send("Hello world!")
-message = ws.recv()
-print(message)
+# ws = create_connection("wss://word-assistant.herokuapp.com/connect")
+# ws = create_connection("ws://localhost:5000/connect")
+# message = ws.recv()
+# print(message)
+
+doc = DocumentWriter()
+
+def on_message(ws, message):
+    print("command", message)
+    command, parameters = parse_message(message)
+    if command == 'type':
+        try:
+            doc.add_text(parameters)
+            doc.save_document()
+            ws.send("Message processed")
+        except:
+            ws.send("Message not processed")
+
+def on_error(ws, error):
+    print(error)
+
+def on_close(ws):
+    print("### closed ###")
+
+def on_open(ws):
+    print("connected")
+
+if __name__ == "__main__":
+    websocket.enableTrace(True)
+    ws = websocket.WebSocketApp("ws://localhost:5000/connect",
+                              on_message = on_message,
+                              on_error = on_error,
+                              on_close = on_close)
+    ws.on_open = on_open
+    ws.run_forever()
+
+# while True:
+#     command = ws.recv()
+#     print("command", command)
+#     command, parameters = parse_message(command)
+#     if command == 'type':
+#         try:
+#             doc.add_text(parameters)
+#             doc.save_document()
+#             ws.send("Message processed")
+#         except:
+#             ws.send("Message not processed")
+
+
 
 #
 # iter = 0
