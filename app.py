@@ -1,37 +1,49 @@
 import os
 import json
 from builtins import print
-
+import redis
 from flask import Flask, request, jsonify
 from flask_sockets import Sockets
-from time import sleep
+
+
+REDIS_URL = os.environ['REDIS_URL']
+# REDIS_URL = "redis://h:p4a49c92f2f92f61555110cca953dd9b8fc55fe9736e8aa3d277ea93fa4abb0c0@ec2-54-158-0-180.compute-1.amazonaws.com:62409"
+REDIS_SERVER = 'server'
+REDIS_CLIENT = 'client'
 
 # Create the Flask WSGI application.
 app = Flask(__name__)
 app.debug = 'DEBUG' in os.environ
 
 sockets = Sockets(app)
+redis = redis.from_url(REDIS_URL)
 
 
 # Define an handler for the root URL of our application.
-# @app.route('/')
-# def hello():
-#     return "Hello world flask"
+@app.route('/')
+def hello():
+    return "Hello world flask"
 
 
 class InputRecords:
 
     def __init__(self):
         self.clients = {}
-
-    def get_clients(self):
-        return str(len(self.clients)) + ' ' + str(self.clients)
+        self.pubsub = redis.pubsub()
+        self.pubsub.subscribe(REDIS_CLIENT)
 
     def register(self, client):
         """Register a WebSocket connection for Redis updates."""
         uid = client.receive()
         app.logger.info('Client connected with id: ' + str(uid))
         self.clients[uid] = client
+
+    def __iter_data(self):
+        for message in self.pubsub.listen():
+            data = message.get('data')
+            if message['type'] == 'message':
+                app.logger.info(u'Received ack: {}'.format(data))
+                yield data
 
     def receive_from_ga(self):
         content = request.get_json()
@@ -43,26 +55,14 @@ class InputRecords:
             "user": 1
         }
         app.logger.info(u'Inserting message: {}'.format(command))
-        print("connected clients: ", self.clients, len(self.clients))
-        acks = []
-        for uid, client in self.clients.items():
-            try:
-                client.send(json.dumps(command))
-                response = client.receive()
-                acks.append((uid, response))
-            except Exception as e:
-                app.logger.error('Failed to send message: ' + str(e) + ' ' + uid)
-                client.close()
-                self.clients.pop(uid)
-                # self.clients.remove((uid, client))
-        print(acks)
-        text = ""
-        for uid, a in acks:
-            if a == "True":
-                text = "Done. Please continue"
-                break
-            else:
-                text = "Sorry. Something went wrong. Please try again."
+        redis.publish(REDIS_SERVER, json.dumps(command))
+        ack = {}
+        for data in self.__iter_data():
+            ack = data
+            break
+
+        print(ack)
+        text = "Done. Please continue" if json.loads(ack)["completed"] else "Sorry. Something went wrong. Please try again."
 
         return jsonify({
             "payload": {
@@ -83,23 +83,8 @@ class InputRecords:
 
 
 input = InputRecords()
-
-app.add_url_rule('/', '', input.get_clients, methods=['GET'])
 app.add_url_rule('/write', 'write', input.receive_from_ga, methods=['POST'])
 
 
-@sockets.route('/connect')
-def outbox(ws):
-    """Sends outgoing chat messages, via `ClientBackend`."""
-    input.register(ws)
-    while not ws.closed:
-        # Context switch while `ChatBackend.start` is running in the background.
-        sleep(0.1)
-
-
 if __name__ == '__main__':
-    from gevent import pywsgi
-    from geventwebsocket.handler import WebSocketHandler
-
-    server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)
-    server.serve_forever()
+    app.run(host='127.0.0.1', port=5000, debug=True)

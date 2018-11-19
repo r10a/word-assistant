@@ -2,8 +2,15 @@ from docx import Document
 import json
 import websocket
 import logging
+import redis
+
 from uuid import getnode
 
+REDIS_URL = "redis://h:p4a49c92f2f92f61555110cca953dd9b8fc55fe9736e8aa3d277ea93fa4abb0c0@ec2-54-158-0-180.compute-1.amazonaws.com:62409"
+REDIS_SERVER = 'server'
+REDIS_CLIENT = 'client'
+
+redis = redis.from_url(REDIS_URL)
 
 WS_URL = "wss://word-assistant.herokuapp.com/connect"
 
@@ -36,8 +43,60 @@ class WebSocketHandler:
 
     def __init__(self):
         self.doc = DocumentWriter()
+        self.pubsub = redis.pubsub()
+        self.pubsub.subscribe(REDIS_SERVER)
+
+    def __iter_data(self):
+        for message in self.pubsub.listen():
+            data = message.get('data')
+            if message['type'] == 'message':
+                print(data)
+                yield data
+
+    def run(self):
+        """Listens for new messages in Redis, and sends them to clients."""
+        for data in self.__iter_data():
+            self.on_message(data)
+
+    def success(self):
+        ack = {
+            "id": getnode(),
+            "completed": True
+        }
+        redis.publish(REDIS_CLIENT, json.dumps(ack))
+
+    def error(self):
+        ack = {
+            "id": getnode(),
+            "completed": False
+        }
+        redis.publish(REDIS_SERVER, json.dumps(ack))
+
+    def on_message(self, message):
+        print("command", message)
+        command, parameters = main.parse_message(message)
+        if command == 'type':
+            try:
+                print("adding", parameters)
+                main.doc.add_text(parameters)
+                main.doc.save_document()
+                self.success()
+            except Exception as e:
+                logging.error('Failed to add to document: ' + str(e))
+                self.error()
+
+        if command == 'create':
+            try:
+                print("creating", parameters)
+                main.doc = DocumentWriter(docname=parameters)
+                main.doc.save_document()
+                self.success()
+            except Exception as e:
+                logging.error('Failed to save document: ' + str(e))
+                self.error()
 
     def parse_message(self, command):
+        print("command", command)
         json_data = json.loads(command)
         query = str(json_data['queryText'])
         parameters = json_data['parameters']['text']
@@ -46,7 +105,7 @@ class WebSocketHandler:
 
 
 main = WebSocketHandler()
-
+main.run()
 
 def on_message(ws, message):
     print("command", message)
@@ -97,8 +156,8 @@ def connect():
     ws.run_forever()
 
 
-if __name__ == "__main__":
-    connect()
+# if __name__ == "__main__":
+#     connect()
 
 
 #
