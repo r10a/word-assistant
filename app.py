@@ -22,7 +22,7 @@ sockets = Sockets(app)
 class InputRecords:
 
     def __init__(self):
-        self.clients = list()
+        self.clients = {}
 
     def get_clients(self):
         return str(len(self.clients)) + ' ' + str(self.clients)
@@ -31,7 +31,7 @@ class InputRecords:
         """Register a WebSocket connection for Redis updates."""
         uid = client.receive()
         app.logger.info('Client connected with id: ' + str(uid))
-        self.clients.append((uid, client))
+        self.clients[uid] = client
 
     def receive_from_ga(self):
         content = request.get_json()
@@ -45,7 +45,7 @@ class InputRecords:
         app.logger.info(u'Inserting message: {}'.format(command))
         print("connected clients: ", self.clients, len(self.clients))
         acks = []
-        for uid, client in self.clients:
+        for uid, client in self.clients.items():
             try:
                 client.send(json.dumps(command))
                 response = client.receive()
@@ -53,7 +53,8 @@ class InputRecords:
             except Exception as e:
                 app.logger.error('Failed to send message: ' + str(e) + ' ' + uid)
                 client.close()
-                self.clients.remove((uid, client))
+                self.clients.pop(uid)
+                # self.clients.remove((uid, client))
         print(acks)
         text = ""
         for uid, a in acks:
