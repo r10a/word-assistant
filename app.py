@@ -1,5 +1,7 @@
 import os
 import json
+from builtins import print
+
 from flask import Flask, request, jsonify
 from flask_sockets import Sockets
 from time import sleep
@@ -38,16 +40,17 @@ class InputRecords:
             "user": 1
         }
         app.logger.info(u'Inserting message: {}'.format(command))
+        print("connected clients: ", self.clients, len(self.clients))
         acks = []
         for uid, client in self.clients:
-            if not client.closed:
-                try:
-                    client.send(json.dumps(command))
-                    response = client.receive()
-                    acks.append((uid, response))
-                except Exception as e:
-                    app.logger.error('Failed to send message: ' + str(e) + ' ' + uid)
-                    self.clients.remove((uid, client))
+            try:
+                client.send(json.dumps(command))
+                response = client.receive()
+                acks.append((uid, response))
+            except Exception as e:
+                app.logger.error('Failed to send message: ' + str(e) + ' ' + uid)
+                client.close()
+                self.clients.remove((uid, client))
         print(acks)
         text = ""
         for uid, a in acks:
