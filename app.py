@@ -1,7 +1,5 @@
 import os
 import json
-import logging
-import gevent
 from flask import Flask, request, jsonify
 from flask_sockets import Sockets
 from time import sleep
@@ -44,12 +42,13 @@ class InputRecords:
                 try:
                     client.send(json.dumps(command))
                     acks.append(client.receive())
-                except Exception:
+                except Exception as e:
+                    app.logger.error('Failed to send message: ' + str(e))
                     self.clients.remove(client)
         print(acks)
         response = ""
         for a in acks:
-            if a == True:
+            if a:
                 response = "Done. Please continue"
                 break
             else:
@@ -58,12 +57,12 @@ class InputRecords:
         return jsonify({
             "payload": {
                 "google": {
-                    "expectUserResponse": true,
+                    "expectUserResponse": True,
                     "richResponse": {
                         "items": [
                             {
                                 "simpleResponse": {
-                                    "textToSpeech": "Sorry. Somthing went wrong. Please try again."
+                                    "textToSpeech": response
                                 }
                             }
                         ]
@@ -82,7 +81,6 @@ app.add_url_rule('/write', 'write', input.receive_from_ga, methods=['POST'])
 def outbox(ws):
     """Sends outgoing chat messages, via `ClientBackend`."""
     input.register(ws)
-    # ws.send("Connected")
     while not ws.closed:
         # Context switch while `ChatBackend.start` is running in the background.
         sleep(0.1)
