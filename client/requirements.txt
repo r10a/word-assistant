@@ -1,4 +1,0 @@
-# This requirements file lists all dependecies for this project.
-#
-# Run 'pip install -r requirements.txt' to install these dependencies
-python-docx==0.8.7

@@ -1,9 +1,7 @@
 import os
 import json
-from builtins import print
 import redis
 from flask import Flask, request, jsonify
-from flask_sockets import Sockets
 
 
 REDIS_URL = os.environ['REDIS_URL']
@@ -15,7 +13,6 @@ REDIS_CLIENT = 'client'
 app = Flask(__name__)
 app.debug = 'DEBUG' in os.environ
 
-sockets = Sockets(app)
 redis = redis.from_url(REDIS_URL)
 
 
@@ -25,18 +22,12 @@ def hello():
     return "Hello world flask"
 
 
-class InputRecords:
+class Server:
 
     def __init__(self):
-        self.clients = {}
+        # self.clients = set()
         self.pubsub = redis.pubsub()
         self.pubsub.subscribe(REDIS_CLIENT)
-
-    def register(self, client):
-        """Register a WebSocket connection for Redis updates."""
-        uid = client.receive()
-        app.logger.info('Client connected with id: ' + str(uid))
-        self.clients[uid] = client
 
     def __iter_data(self):
         for message in self.pubsub.listen():
@@ -82,8 +73,8 @@ class InputRecords:
         })
 
 
-input = InputRecords()
-app.add_url_rule('/write', 'write', input.receive_from_ga, methods=['POST'])
+server = Server()
+app.add_url_rule('/write', 'write', server.receive_from_ga, methods=['POST'])
 
 
 if __name__ == '__main__':
