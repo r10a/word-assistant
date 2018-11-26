@@ -1,5 +1,6 @@
 certifi==2018.10.15
 Click==7.0
+comtypes==1.1.7
 Flask==1.0.2
 gunicorn==19.9.0
 itsdangerous==1.1.0
@@ -7,6 +8,9 @@ Jinja2==2.10
 lxml==4.2.5
 MarkupSafe==1.1.0
 python-docx==0.8.7
+pywin32==224
+pywinauto==0.6.5
 redis==3.0.1
+six==1.11.0
 Werkzeug==0.14.1
 wincertstore==0.2
