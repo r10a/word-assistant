@@ -4,8 +4,8 @@ import redis
 from flask import Flask, request, jsonify
 
 
-REDIS_URL = os.environ['REDIS_URL']
-# REDIS_URL = "redis://h:p4a49c92f2f92f61555110cca953dd9b8fc55fe9736e8aa3d277ea93fa4abb0c0@ec2-54-158-0-180.compute-1.amazonaws.com:62409"
+#REDIS_URL = os.environ['REDIS_URL']
+REDIS_URL = "redis://h:p4a49c92f2f92f61555110cca953dd9b8fc55fe9736e8aa3d277ea93fa4abb0c0@ec2-54-158-0-180.compute-1.amazonaws.com:62409"
 REDIS_SERVER = 'server'
 REDIS_CLIENT = 'client'
 
