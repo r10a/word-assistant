@@ -33,22 +33,18 @@ class Server:
         for message in self.pubsub.listen():
             data = message.get('data')
             if message['type'] == 'message':
-                app.logger.info(u'Received ack: {}'.format(data))
                 yield data
 
     def receive_from_ga(self):
         content = request.get_json()
         print("content", content)
         queryResult = content['queryResult']
-        command = {
-            "queryText": queryResult['queryText'],
-            "parameters": queryResult['parameters'],
-            "user": 1
-        }
+        command = {'queryText': queryResult['queryText'], 'parameters': queryResult['parameters']}
         app.logger.info(u'Inserting message: {}'.format(command))
         redis.publish(REDIS_SERVER, json.dumps(command))
         ack = {}
         for data in self.__iter_data():
+            app.logger.info(u'Received ack: {}'.format(data))
             ack = data
             break
 
