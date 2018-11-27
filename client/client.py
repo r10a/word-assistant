@@ -20,13 +20,14 @@ class CommandHandler:
         self.doc = None
         self.new_window = None
         self.document_open = False
-        self.username = self.get_username()[0:6]
+        self.username = 'saif'
         self.pubsub = redis.pubsub()
         self.pubsub.subscribe(REDIS_SERVER)
 
     def open_doc(self):
-        self.doc = Application(backend='uia').start("C:\\Program Files\\Microsoft Office\\Office16\\WINWORD.EXE", timeout=50)
+        self.doc = Application().start(cmd_line=u'C:\\Program Files (x86)\\Microsoft Office\\root\\Office16\\WINWORD.EXE')
         self.new_window = self.doc.window(top_level_only=True, active_only=True, class_name='OpusApp')
+        self.new_window.type_keys(r'{ENTER}')
         self.document_open = True
         self.respond(True, "")
 
@@ -62,7 +63,7 @@ class CommandHandler:
         if command is None:
             return None
 
-        if command.lower() == 'open':
+        if command.lower() in ['open', 'create']:
             try:
                 print("opening document")
                 self.open_doc()
@@ -120,7 +121,7 @@ class CommandHandler:
         iuser = json_data['parameters']['name'].lower()
         if self.username == iuser or iuser == 'all':
             query = str(json_data['queryText'])
-            parameters = json_data['parameters']['text'] if json_data['parameters'] else None
+            parameters = json_data['parameters']['text'] if 'text' in json_data['parameters'] else None
             command = query.split()[0]
             return command, parameters
         else:
