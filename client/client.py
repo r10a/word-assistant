@@ -1,9 +1,9 @@
-from docx import Document
 import json
 import logging
 import redis
 import os
 from pywinauto.application import Application
+import getpass
 
 from uuid import getnode
 
@@ -14,42 +14,13 @@ REDIS_CLIENT = 'client'
 redis = redis.from_url(REDIS_URL)
 
 
-# TODO: Add more functionality
-class DocumentWriter:
-
-    def __init__(self, docname="generated.docx"):
-        self._current_para = None
-        self.error_code = 0
-        #self._document = Document()
-        self._document = Application().start("C:\\Program Files\\Microsoft Office\\Office16\\WINWORD.EXE", timeout=50)
-        self._new_window = self._document.Window_(top_level_only=True, active_only=True, class_name='OpusApp')
-        self._docname = docname
-
-    def get_docname(self):
-        return self._docname
-
-    def add_text(self, text):
-        if self._current_para is None:
-            self.add_paragraph(text)
-        else:
-            self._current_para.add_run(text=text)
-
-    def add_heading(self, text):
-        self._current_para = self._document.add_heading(text=text)
-
-    def add_paragraph(self, text):
-        self._current_para = self._document.add_paragraph(text=text)
-
-    # def save_document(self):
-    #     self._document.save(self._docname)
-
-
 class CommandHandler:
 
     def __init__(self):
         self.doc = None
         self.new_window = None
         self.document_open = False
+        self.username = self.get_username()
         self.pubsub = redis.pubsub()
         self.pubsub.subscribe(REDIS_SERVER)
 
@@ -58,6 +29,9 @@ class CommandHandler:
         self.new_window = self.doc.window(top_level_only=True, active_only=True, class_name='OpusApp')
         self.document_open = True
         self.respond(True, "")
+
+    def get_username(self):
+        return getpass.getuser()
 
     def __iter_data(self):
         for message in self.pubsub.listen():
@@ -82,12 +56,11 @@ class CommandHandler:
     def save_doc(self):
         self.new_window.type_keys(r'%FAO{ENTER}')
 
-
     def on_message(self, message):
         print("command", message)
         command, parameters = self.parse_message(message)
 
-        if command == 'open':
+        if command.lower() == 'open':
             try:
                 print("opening document")
                 self.open_doc()
@@ -96,7 +69,7 @@ class CommandHandler:
                 logging.error('Failed to open document: ' + str(e))
                 self.respond(False, "Not Opened")
 
-        if command == 'type':
+        if command.lower() == 'type':
             try:
                 if not self.document_open:
                     self.open_doc()
@@ -107,7 +80,7 @@ class CommandHandler:
                 logging.error('Failed to add to document: ' + str(e))
                 self.respond(False, parameters)
 
-        if command == 'delete':  # TODO: Implement
+        if command.lower() == 'delete':  # TODO: Implement
             try:
                 print("deleting", parameters)
                 os.remove(self.doc.get_docname())
@@ -116,7 +89,7 @@ class CommandHandler:
                 logging.error('Failed to delete document: ' + str(e))
                 self.respond(False, "Not Deleted")
 
-        if command == 'save':
+        if command.lower() == 'save':
             try:
                 print("saving")
                 self.save_doc()
@@ -125,10 +98,12 @@ class CommandHandler:
                 logging.error('Failed to save document: ' + str(e))
                 self.respond(False, "Not saved")
 
-        if command == 'close':
+        if command.lower() in ['close', 'finish']:
             try:
                 print("closing")
+                self.save_doc()
                 self.new_window.type_keys(r'%{F4}')
+                self.document_open = False
                 self.respond(True, "Closed")
             except Exception as e:
                 logging.error('Failed to save document: ' + str(e))
