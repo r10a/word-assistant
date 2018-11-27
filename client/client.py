@@ -20,7 +20,7 @@ class CommandHandler:
         self.doc = None
         self.new_window = None
         self.document_open = False
-        self.username = self.get_username()
+        self.username = self.get_username()[0:6]
         self.pubsub = redis.pubsub()
         self.pubsub.subscribe(REDIS_SERVER)
 
@@ -57,8 +57,10 @@ class CommandHandler:
         self.new_window.type_keys(r'%FAO{ENTER}')
 
     def on_message(self, message):
-        print("command", message)
         command, parameters = self.parse_message(message)
+        print(command, parameters)
+        if command is None:
+            return None
 
         if command.lower() == 'open':
             try:
@@ -69,8 +71,9 @@ class CommandHandler:
                 logging.error('Failed to open document: ' + str(e))
                 self.respond(False, "Not Opened")
 
-        if command.lower() == 'type':
+        if command.lower() in ['type', 'write']:
             try:
+                print(self.username)
                 if not self.document_open:
                     self.open_doc()
                 print("adding", parameters)
@@ -112,10 +115,17 @@ class CommandHandler:
     def parse_message(self, command):
         print("command", command)
         json_data = json.loads(command)
-        query = str(json_data['queryText'])
-        parameters = json_data['parameters']['text'] if json_data['parameters'] else None
-        command = query.split()[0]
-        return command, parameters
+        parameters = None
+        command = None
+        iuser = json_data['parameters']['name'].lower()
+        if self.username == iuser or iuser == 'all':
+            query = str(json_data['queryText'])
+            parameters = json_data['parameters']['text'] if json_data['parameters'] else None
+            command = query.split()[0]
+            return command, parameters
+        else:
+            return None, None
+
 
 
 ch = CommandHandler()
