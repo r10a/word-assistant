@@ -3,13 +3,14 @@ import logging
 import redis
 import os
 from pywinauto.application import Application
-import getpass
-
-from uuid import getnode
+from wakeonlan import send_magic_packet
+from subprocess import Popen
 
 REDIS_URL = "redis://h:p4a49c92f2f92f61555110cca953dd9b8fc55fe9736e8aa3d277ea93fa4abb0c0@ec2-54-158-0-180.compute-1.amazonaws.com:62409"
 REDIS_SERVER = 'server'
 REDIS_CLIENT = 'client'
+
+ip = '129.107.116.119'
 
 redis = redis.from_url(REDIS_URL)
 
@@ -31,8 +32,6 @@ class CommandHandler:
         self.document_open = True
         self.respond(True, "")
 
-    def get_username(self):
-        return getpass.getuser()
 
     def __iter_data(self):
         for message in self.pubsub.listen():
@@ -47,11 +46,11 @@ class CommandHandler:
 
     def respond(self, completed, parameters):
         ack = {
-            "id": getnode(),
+            "id": self.username,
             "completed": completed,
             "parameters": parameters
         }
-        print(ack)
+        print("sending response: ", ack)
         redis.publish(REDIS_CLIENT, json.dumps(ack))
 
     def save_doc(self):
@@ -59,7 +58,7 @@ class CommandHandler:
 
     def on_message(self, message):
         command, parameters = self.parse_message(message)
-        print(command, parameters)
+        print("Command: ", command, " Params: ", parameters)
         if command is None:
             return None
 
@@ -113,13 +112,30 @@ class CommandHandler:
                 logging.error('Failed to save document: ' + str(e))
                 self.respond(False, "Not Closed")
 
+        if command.lower() in ['boot', 'power on']:
+            send_magic_packet('10.7B.44.93.AC.41', ip_address=ip, port=9)
+            self.respond(True, "Booting up")
+
+        if command.lower() in ['off', 'turn off', 'shutdown', 'power off']:
+            p = Popen("plink root@129.107.116.119 -pw toor /home/rohit/shutdown.sh")
+            # stdout, stderr = p.communicate()
+            self.respond(True, "shutting down")
+
     def parse_message(self, command):
         print("command", command)
+        print(command)
         json_data = json.loads(command)
         parameters = None
         command = None
-        iuser = json_data['parameters']['name'].lower()
-        if self.username == iuser or iuser == 'all':
+        iuser = None
+        if 'name' in json_data['parameters']:
+            iuser = json_data['parameters']['name'].lower()
+            print("username: ", iuser)
+        else:
+            command = str(json_data['queryText'])
+            return command, None
+
+        if iuser and self.username == iuser or iuser == 'all':
             query = str(json_data['queryText'])
             parameters = json_data['parameters']['text'] if 'text' in json_data['parameters'] else None
             command = query.split()[0]
