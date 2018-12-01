@@ -7,7 +7,6 @@ itsdangerous==1.1.0
 Jinja2==2.10
 lxml==4.2.5
 MarkupSafe==1.1.0
-python-docx==0.8.7
 pywin32==224
 pywinauto==0.6.5
 redis==3.0.1
