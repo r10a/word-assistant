@@ -31,7 +31,7 @@ class Server:
     """ Class responsible for broadcasting google assistant messages to clients via REDIS """
 
     def __init__(self):
-        self.pubsub: object = redis.pubsub()  # Attach to redis pubsub
+        self.pubsub = redis.pubsub()  # Attach to redis pubsub
         self.pubsub.subscribe(REDIS_CLIENT)  # Start listening to Client channel for acknowledgements
 
     def __iter_data(self):
@@ -42,27 +42,18 @@ class Server:
         for message in self.pubsub.listen():  # Listen on client channel for ack. Blocks until ack is received
             data: str = message.get('data')  # extract ack
             if message['type'] == 'message':
-                app.logger.info(u'Received ack: {}'.format(data))  # log ack
-                yield data  # yield ack
+                yield data
 
     def receive_from_ga(self):
-        """
-        method which listens POST requests from google assistant, broadcasts them to clients, waits for ack and responds
-        to google assistant with results
-        :return: str: Json responding to google assistant
-        """
-        content: dict = request.get_json()  # parse POST request from google assistant
-        print("content", content)  # print contents to log
-        queryResult: dict = content['queryResult']  # parse request body and extract relevant data
-        command = {
-            "queryText": queryResult['queryText'],
-            "parameters": queryResult['parameters'],
-            "user": 1
-        }
-        app.logger.info(u'Inserting message: {}'.format(command))  # log extracted data
-        redis.publish(REDIS_SERVER, json.dumps(command))  # broadcast extracted data to clients
+        content = request.get_json()
+        print("content", content)
+        queryResult = content['queryResult']
+        command = {'queryText': queryResult['queryText'], 'parameters': queryResult['parameters']}
+        app.logger.info(u'Inserting message: {}'.format(command))
+        redis.publish(REDIS_SERVER, json.dumps(command))
         ack = {}
-        for data in self.__iter_data():  # wait for ack from clients
+        for data in self.__iter_data():
+            app.logger.info(u'Received ack: {}'.format(data))
             ack = data
             break  # break on receiving ack
 
