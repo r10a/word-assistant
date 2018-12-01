@@ -6,13 +6,11 @@ from wakeonlan import send_magic_packet
 from subprocess import Popen
 
 REDIS_URL = "redis://h:p4a49c92f2f92f61555110cca953dd9b8fc55fe9736e8aa3d277ea93fa4abb0c0@ec2-54-158-0-180.compute-1.amazonaws.com:62409"
-REDIS_SERVER = 'server'
-REDIS_CLIENT = 'client'
+REDIS_SERVER = 'server'  # Redis server channel name
+REDIS_CLIENT = 'client'  # Redis client channel name
 
 ip = '129.107.116.129'  # IP address of the client system to boot and shut down
-
 redis = redis.from_url(REDIS_URL)  # attach to Redis server running on REDIS_URL
-
 
 class CommandHandler:
     """
@@ -25,10 +23,10 @@ class CommandHandler:
         document to None
         """
         self.doc: str = None  # variable to store the document object handle from pywinauto library
-        self.new_window: object = None  # object variable to store a document window
+        self.new_window = None  # object variable to store a document window
         self.document_open: str = False  # variable to keep track of the status of the document(open/close)
         self.username: str = 'saif'  # username variable initialized to the client username
-        self.pubsub: object = redis.pubsub()  # redis publish-subscribe protocol object
+        self.pubsub = redis.pubsub()  # redis publish-subscribe protocol object
         self.pubsub.subscribe(REDIS_SERVER)  # redis pub-sub protocol initialized to listen to 'REDIS_SERVER' channel
 
     def open_doc(self):
@@ -40,7 +38,6 @@ class CommandHandler:
         self.new_window.type_keys(r'{ENTER}')  # opens a blank document using ENTER key press
         self.document_open = True  # sets document status to open
         self.respond(True, "")  # responds to server with 'True'
-
 
     def __iter_data(self):
         """
