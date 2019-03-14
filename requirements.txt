@@ -7,8 +7,9 @@ itsdangerous==1.1.0
 Jinja2==2.10
 lxml==4.2.5
 MarkupSafe==1.1.0
-pywin32==224
-pywinauto==0.6.5
+# only available on windows
+# pywin32==224
+# pywinauto==0.6.5
 redis==3.0.1
 six==1.11.0
 wakeonlan==1.1.6
